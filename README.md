@@ -1,6 +1,6 @@
 # Chat with PDF (Hugging Face)
 
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Yashwant-king/chat-with-pdf/blob/main/chat_with_pdf.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Yashwant-king/chat-with-pdf/blob/main/chat_with_pdf_hf.ipynb)
 
 # 📄 Chat with Your PDF (AI Document Assistant)
 
