@@ -21,7 +21,7 @@ A simple **Python + LLM** project that lets you upload a PDF and chat with it us
 ## 🚀 Run Locally
 ```bash
 pip install -r requirements.txt
-export OPENAI_API_KEY="your_api_key"
+export HUGGING_FACE_KEY="your_api_key"
 streamlit run app.py
 ```
 
