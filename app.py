@@ -1,37 +1,67 @@
-import streamlit as st
+# ==============================
+# Chat with PDF using Hugging Face API
+# Free and easy to use
+# ==============================
+
+!pip install -q transformers PyPDF2 huggingface_hub torch
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from huggingface_hub import login
 from PyPDF2 import PdfReader
-from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.vectorstores import FAISS
-from langchain.chat_models import ChatOpenAI
-from langchain.chains import ConversationalRetrievalChain
-import os
+from google.colab import files
+import torch
 
-st.set_page_config(page_title="Chat with your PDF", page_icon="📄")
-st.title("📄 Chat with your PDF")
+# 1️⃣ Log in to Hugging Face
+api_token = input("Enter your Hugging Face API token: ")
+login(api_token)
 
-pdf = st.file_uploader("Upload your PDF", type="pdf")
+# 2️⃣ Select model (change if you want)
+model_name = "tiiuae/falcon-7b-instruct"
 
-if pdf:
-    pdf_reader = PdfReader(pdf)
-    text = ""
-    for page in pdf_reader.pages:
-        text += page.extract_text()
+# 3️⃣ Load model and tokenizer
+print("Loading model (this may take 1-2 minutes)...")
+tokenizer = AutoTokenizer.from_pretrained(model_name)
+model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
 
-    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-    chunks = splitter.split_text(text)
+generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
 
-    embeddings = OpenAIEmbeddings(openai_api_key=os.getenv("OPENAI_API_KEY"))
-    db = FAISS.from_texts(chunks, embeddings)
+# 4️⃣ Upload PDF
+print("Upload your PDF file:")
+uploaded = files.upload()
+pdf_path = next(iter(uploaded.keys()))
 
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=os.getenv("OPENAI_API_KEY"))
-    chain = ConversationalRetrievalChain.from_llm(llm, db.as_retriever())
+# 5️⃣ Extract text
+reader = PdfReader(pdf_path)
+pdf_text = ""
+for page in reader.pages:
+    page_text = page.extract_text()
+    if page_text:
+        pdf_text += page_text + "\n"
 
-    st.success("✅ PDF processed successfully! Ask your questions below 👇")
+if not pdf_text.strip():
+    raise SystemExit("No text extracted. Use a text-based PDF, not scanned images.")
 
-    chat_history = []
-    query = st.text_input("Ask a question about your PDF:")
-    if query:
-        result = chain({"question": query, "chat_history": chat_history})
-        st.markdown(f"**Answer:** {result['answer']}")
-        chat_history.append((query, result["answer"]))
+print(f"✅ Extracted {len(pdf_text)} characters from PDF (showing first 500):\n")
+print(pdf_text[:500])
+
+# 6️⃣ Ask questions
+def ask_question(question):
+    prompt = f"""
+You are an assistant. Answer using only the following PDF text. If answer not present, say 'I don't know'.
+
+PDF text (partial):
+{pdf_text[:15000]}
+
+Question: {question}
+"""
+    result = generator(prompt, max_length=500, do_sample=True, temperature=0.7)
+    return result[0]["generated_text"]
+
+# 7️⃣ Interactive loop
+print("\n✅ Ready! Type your questions. Type 'exit' to quit.")
+while True:
+    q = input("\n❓ Ask: ")
+    if q.lower() in ["exit", "quit"]:
+        print("👋 Goodbye!")
+        break
+    ans = ask_question(q)
+    print("\n💬 Answer:\n", ans)
