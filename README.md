@@ -1,7 +1,7 @@
 # 📄 Chat with Your PDF (AI Document Assistant)
 
 ## 🧠 Description
-A simple **Python + LLM** project that lets you upload a PDF and chat with it using **OpenAI GPT**. Extracts text, embeds it, and answers your questions conversationally.
+A simple **Python + LLM** project that lets you upload a PDF and chat with it using **Hugging Face API**. Extracts text, embeds it, and answers your questions conversationally.
 
 ## ⚙️ Features
 ✅ Upload any PDF  
@@ -14,7 +14,7 @@ A simple **Python + LLM** project that lets you upload a PDF and chat with it us
 - Python
 - Streamlit
 - LangChain
-- OpenAI API
+- HuggingFace API
 - FAISS
 - PyPDF2
 
