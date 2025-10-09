@@ -29,5 +29,3 @@ export HUGGING_FACE_KEY="your_api_key"
 streamlit run app.py
 ```
 
-## 💼 Resume Line
-> Built an AI-powered PDF assistant using Python, LangChain, and OpenAI GPT API to enable natural language interaction with documents.
