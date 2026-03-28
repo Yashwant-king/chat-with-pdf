@@ -1,5 +1,9 @@
-streamlit
-PyPDF2
-langchain
-openai
-faiss-cpu
+streamlit>=1.32.0
+PyPDF2>=3.0.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-text-splitters>=0.0.1
+openai>=1.0.0
+faiss-cpu>=1.7.4
+huggingface_hub>=0.20.0
+sentence-transformers>=2.2.0
