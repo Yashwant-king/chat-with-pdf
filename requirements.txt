@@ -1,5 +1,7 @@
-streamlit
-PyPDF2
-langchain
-openai
-faiss-cpu
+streamlit>=1.32.0
+groq>=1.1.0
+pdfplumber>=0.10.0
+faiss-cpu>=1.7.4
+sentence-transformers>=2.6.0
+python-dotenv>=1.0.0
+numpy>=1.24.0
