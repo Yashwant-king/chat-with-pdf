@@ -1,7 +1,6 @@
 # 📄 Chat with PDF — AI Document Assistant
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://chat-with-pdf-k8iq5wfwp9e3wpqttjhwek.streamlit.app/)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Yashwant-king/chat-with-pdf/blob/main/chat_with_pdf_hf.ipynb)
 
 A **Streamlit web app** that lets you upload PDFs and chat with them using **Groq LLaMA 3.1** and **FAISS semantic search (RAG)**.
 
