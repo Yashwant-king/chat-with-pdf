@@ -1,5 +1,7 @@
 streamlit
 PyPDF2
 langchain
-openai
+huggingface_hub
+sentence-transformers
 faiss-cpu
+tiktoken

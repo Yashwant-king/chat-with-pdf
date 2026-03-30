@@ -1,67 +1,121 @@
-# ==============================
-# Chat with PDF using Hugging Face API
-# Free and easy to use
-# ==============================
-
-!pip install -q transformers PyPDF2 huggingface_hub torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from huggingface_hub import login
+import streamlit as st
 from PyPDF2 import PdfReader
-from google.colab import files
-import torch
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores import FAISS
+from langchain.chains.question_answering import load_qa_chain
+from langchain.llms import HuggingFaceHub
+import os
 
-# 1️⃣ Log in to Hugging Face
-api_token = input("Enter your Hugging Face API token: ")
-login(api_token)
+# Set page config
+st.set_page_config(
+    page_title="Chat with PDF",
+    page_icon="📄",
+    layout="wide"
+)
 
-# 2️⃣ Select model (change if you want)
-model_name = "tiiuae/falcon-7b-instruct"
+# Title and description
+st.title("📄 Chat with Your PDF")
+st.markdown("Upload a PDF and ask questions about its content using AI")
 
-# 3️⃣ Load model and tokenizer
-print("Loading model (this may take 1-2 minutes)...")
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16)
+# Sidebar for API key
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    api_key = st.text_input("Enter your Hugging Face API Key", type="password")
+    st.markdown("[Get your API key here](https://huggingface.co/settings/tokens)")
 
-generator = pipeline("text-generation", model=model, tokenizer=tokenizer)
+    if api_key:
+        os.environ["HUGGINGFACEHUB_API_TOKEN"] = api_key
+        st.success("API Key configured!")
 
-# 4️⃣ Upload PDF
-print("Upload your PDF file:")
-uploaded = files.upload()
-pdf_path = next(iter(uploaded.keys()))
+    st.markdown("---")
+    st.markdown("### About")
+    st.markdown("This app uses Hugging Face models to answer questions about your PDF documents.")
 
-# 5️⃣ Extract text
-reader = PdfReader(pdf_path)
-pdf_text = ""
-for page in reader.pages:
-    page_text = page.extract_text()
-    if page_text:
-        pdf_text += page_text + "\n"
+# File uploader
+uploaded_file = st.file_uploader("Upload your PDF", type=['pdf'])
 
-if not pdf_text.strip():
-    raise SystemExit("No text extracted. Use a text-based PDF, not scanned images.")
+if uploaded_file is not None:
+    # Extract text from PDF
+    with st.spinner("📖 Reading PDF..."):
+        pdf_reader = PdfReader(uploaded_file)
+        text = ""
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text
 
-print(f"✅ Extracted {len(pdf_text)} characters from PDF (showing first 500):\n")
-print(pdf_text[:500])
+        if not text.strip():
+            st.error("❌ Could not extract text from PDF. Please ensure it's a text-based PDF.")
+        else:
+            st.success(f"✅ Successfully extracted text from {len(pdf_reader.pages)} pages")
 
-# 6️⃣ Ask questions
-def ask_question(question):
-    prompt = f"""
-You are an assistant. Answer using only the following PDF text. If answer not present, say 'I don't know'.
+            # Show preview
+            with st.expander("📄 Preview extracted text"):
+                st.text(text[:1000] + "..." if len(text) > 1000 else text)
 
-PDF text (partial):
-{pdf_text[:15000]}
+    if text.strip() and api_key:
+        # Split text into chunks
+        with st.spinner("🔨 Processing document..."):
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200,
+                length_function=len
+            )
+            chunks = text_splitter.split_text(text)
 
-Question: {question}
-"""
-    result = generator(prompt, max_length=500, do_sample=True, temperature=0.7)
-    return result[0]["generated_text"]
+            # Create embeddings and vector store
+            embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+            knowledge_base = FAISS.from_texts(chunks, embeddings)
 
-# 7️⃣ Interactive loop
-print("\n✅ Ready! Type your questions. Type 'exit' to quit.")
-while True:
-    q = input("\n❓ Ask: ")
-    if q.lower() in ["exit", "quit"]:
-        print("👋 Goodbye!")
-        break
-    ans = ask_question(q)
-    print("\n💬 Answer:\n", ans)
+            st.success(f"✅ Document processed into {len(chunks)} chunks")
+
+        # Question input
+        st.markdown("---")
+        st.subheader("💬 Ask Questions")
+        question = st.text_input("Enter your question about the PDF:")
+
+        if question:
+            with st.spinner("🤔 Thinking..."):
+                # Search for relevant documents
+                docs = knowledge_base.similarity_search(question, k=3)
+
+                # Initialize LLM
+                llm = HuggingFaceHub(
+                    repo_id="google/flan-t5-large",
+                    model_kwargs={"temperature": 0.5, "max_length": 512}
+                )
+
+                # Create QA chain
+                chain = load_qa_chain(llm, chain_type="stuff")
+
+                # Get answer
+                response = chain.run(input_documents=docs, question=question)
+
+                # Display answer
+                st.markdown("### 🤖 Answer:")
+                st.info(response)
+
+                # Show source chunks
+                with st.expander("📚 View source chunks"):
+                    for i, doc in enumerate(docs):
+                        st.markdown(f"**Chunk {i+1}:**")
+                        st.text(doc.page_content)
+                        st.markdown("---")
+
+    elif text.strip() and not api_key:
+        st.warning("⚠️ Please enter your Hugging Face API key in the sidebar to start asking questions.")
+
+else:
+    st.info("👆 Please upload a PDF file to get started")
+
+# Footer
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center'>
+        <p>Built with ❤️ using Streamlit, LangChain, and Hugging Face</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
